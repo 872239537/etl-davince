@@ -121,9 +121,6 @@ function data_cleaning(){
         #导入数据到hive表
         insert_table
         writeLog "导入数据到hive表"
-        if [ "${IS_DEBUG}" = "true" ] && [ -n "${DEBUG_DATA_PATH}" ] && [ ! -d "${DEBUG_DATA_PATH}" ];then
-                hive -e "LOAD DATA LOCAL INPATH '${DEBUG_DATA_PATH}' INTO TABLE ${HIVE_DB}.${HIVE_TABLE};"
-        fi
     fi
 }
 

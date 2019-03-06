@@ -96,6 +96,62 @@ function import_db_to_hive(){
 }
 
 
+
+
+function increment_by_time_import_db_to_hive() {
+    for ele in ${tables[*]}
+    do
+        table=${ele}
+        if [ "${IS_INIT}" = "true" ]; then
+            LAST_VALUE="2000-01-01 00:00:00"
+        else
+            LAST_VALUE=hive -e " select max(create_time) from raw.ods_config_increment where db_name='' and table_name='' order by create_time desc limit 1"
+        fi
+
+         sqoop import --hive-import --connect ${SOURCE_JDBC_URL} --username ${SOURCE_USERNAME} --password ${SOURCE_PASSWORD} \
+         -m 1 --table ${TABLE_PRE}${table}  --hive-table ${HIVE_DB}.${TABLE_PREFIX}${table} \
+        --check-column ${CHECKCOLUMN} --incremental lastmodified --last-value "${LAST_VALUE}" --merge-key id
+        LAST_VALUE=hive -e " select max(${CHECKCOLUMN}) from ${HIVE_DB}.${TABLE_PREFIX}${table}"
+        hive -e"
+            INSERT INTO TABLE raw.ods_config_increment(db_name,table_name,create_time,table_id)
+            values('${RAW_DATABASE}','${table}','$LAST_VALUE','0')"
+    done
+}
+
+
+
+function increment_by_id_import_db_to_hive() {
+
+    for ele in ${tables[*]}
+        do
+         table=${ele}
+#         echo "in $table"
+#         current_date=`date +"%Y-%m-%d %H:%M:%S"`
+#         echo $current_date
+#         if [ ${IS_INIT} = "false" ]; then
+#            LAST_VALUE="0"
+#            echo "in"
+#         else
+#            LAST_VALUE=$(hive -e "select table_id from ( select table_id,create_time from raw.ods_config_increment where db_name='${RAW_DATABASE}' and table_name='${table}' order by create_time desc limit 1) a")
+#         fi
+
+         sqoop import --hive-import --connect ${SOURCE_JDBC_URL} --username ${SOURCE_USERNAME} --password ${SOURCE_PASSWORD} \
+         -m 1 --table ${TABLE_PRE}${table}  --hive-table ${HIVE_DB}.${TABLE_PREFIX}${table} \
+        --check-column ${CHECKCOLUMN} --incremental append --last-value 774937 --merge-key id
+
+
+
+
+#        echo "HIVE_DB: ${HIVE_DB}"
+#        LAST_VALUE=$(hive -e " select max(${CHECKCOLUMN}) from ${HIVE_DB}.${TABLE_PREFIX}${table}")
+#         echo "LAST_VALUE2: $LAST_VALUE"
+#        hive -e"
+#            INSERT INTO TABLE raw.ods_config_increment(db_name,table_name,create_time,table_id)
+#            values('${RAW_DATABASE}','${table}','$current_date','$LAST_VALUE')"
+    done
+}
+
+
 function create_databases(){
     writeLog "创建db"
     hive -e "create database IF NOT EXISTS ${HIVE_DB}"
